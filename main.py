@@ -4,7 +4,6 @@ import feedparser
 from google import genai
 from tradingview_ta import TA_Handler, Interval
 
-from datetime import datetime, timezone, timedelta
 # ==========================================
 # 1. ตั้งค่า API Key & Cloudflare Endpoint
 # ==========================================
@@ -140,28 +139,7 @@ def run_investment_ai_pipeline():
         print(report_text)
 
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        #print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
-        
-        # คำนวณวัน เวลา ปัจจุบันของประเทศไทย (UTC+7)
-        tz_th = timezone(timedelta(hours=7))
-        now_th = datetime.now(tz_th)
-
-        # จัดรูปแบบ วัน เดือน ปี (พ.ศ.) และเวลา
-        date_str = now_th.strftime("%d/%m/%Y")
-        time_str = now_th.strftime("%H:%M:%S")
-
-        # สร้าง Header แสดงสถานะ วัน เดือน ปี และเวลา
-        header = (
-            f"STATUS: SUCCESS\n"
-            f"📅 วันที่: {date_str}  ⏰ เวลา: {time_str} น. (เวลาไทย)\n"
-            f"--------------------------------------------------\n"
-            f"📊 รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report\n\n"
-        )
-
-        send_to_cloudflare(header + report_text)
-
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       
+    
         header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report]\n\n"
         send_to_cloudflare(header + report_text)
 
