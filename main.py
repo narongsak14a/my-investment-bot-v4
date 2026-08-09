@@ -3,13 +3,18 @@ import requests
 import feedparser
 from google import genai
 from tradingview_ta import TA_Handler, Interval
+from youtube_transcript_api import YouTubeTranscriptApi
 
 # ==========================================
-# 1. ตั้งค่า API Key & Cloudflare Endpoint
+# 1. ตั้งค่า API Key, Endpoints & Variables
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
+
+# รายชื่อ Video ID จาก YouTube (ใส่เฉพาะ ID เช่น https://www.youtube.com/watch?v=ABC123xyz ให้ใส่ "ABC123xyz")
+# ใส่ Video ID คลิปสัมภาษณ์จากช่อง @traderkp หรือช่องอื่นๆ ที่ต้องการที่นี่
+YOUTUBE_VIDEO_IDS = ["Fp52DRLJ9c0"]
 
 # รายชื่อสินทรัพย์ ดัชนีอ้างอิง และกองทุนเป้าหมาย
 ASSETS = [
@@ -33,7 +38,7 @@ ASSETS = [
 # 2. ฟังก์ชันดึงข้อมูลเชิงลึก
 # ==========================================
 def fetch_all_tradingview_signals():
-    print("⏳ กำลังดึงสัญญาณเทคนิคคอลเชิงลึกจาก TradingView...")
+    print("⏳ กำลังดึงสัญญาณเทคนิคอลเชิงลึกจาก TradingView...")
     tv_summary_report = ""
     for asset in ASSETS:
         try:
@@ -60,7 +65,6 @@ def fetch_all_tradingview_signals():
 def fetch_rss_news():
     print("⏳ กำลังเชื่อมต่อดึงข้อมูลข่าวสารและบทวิเคราะห์จาก Investing.com & Yahoo Finance...")
     
-    # รวม RSS Feeds ข่าวเศรษฐกิจและบทวิเคราะห์จาก Investing.com + Yahoo Finance
     feed_urls = [
         "https://th.investing.com/rss/news.rss",            # ข่าวด่วนการเงิน Investing.com (ภาษาไทย)
         "https://th.investing.com/rss/market_overview.rss",  # บทวิเคราะห์ภาพรวมตลาด Investing.com
@@ -85,6 +89,21 @@ def fetch_rss_news():
         news_compiled = "• ไม่สามารถดึงข้อมูลข่าวสารได้ในขณะนี้\n"
         
     return news_compiled
+
+def fetch_youtube_insights():
+    print("⏳ กำลังดึงบทสัมภาษณ์และมุมมองเชิงลึกจาก YouTube...")
+    yt_summary = ""
+    for video_id in YOUTUBE_VIDEO_IDS:
+        if not video_id:
+            continue
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['th', 'en'])
+            text = " ".join([item['text'] for item in transcript])[:1800]
+            yt_summary += f"• สรุปบทสัมภาษณ์ YouTube (ID: {video_id}): {text}\n\n"
+        except Exception as e:
+            print(f"⚠️ ไม่สามารถดึง Transcript จากคลิป {video_id}: {e}")
+            
+    return yt_summary if yt_summary else "• ไม่มีข้อมูลบทสัมภาษณ์ YouTube ในรอบนี้\n"
 
 def send_to_cloudflare(message_text):
     print("⏳ กำลังส่งข้อมูลไปยัง Cloudflare...")
@@ -117,11 +136,12 @@ def send_to_cloudflare(message_text):
 def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
     raw_news_data = fetch_rss_news()
+    youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
 
     macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' 
-หน้าที่ของคุณคือวิเคราะห์ความเชื่อมโยงระดับสถาบันระหว่าง 'กระแสข่าวเศรษฐกิจและบทวิเคราะห์จาก Investing.com' กับ 'สัญญาณกราฟเทคนิคอลเชิงลึกจาก TradingView' ของสินทรัพย์และกองทุนเป้าหมาย เพื่อส่งต่อข้อมูลให้วิเคราะห์เป็น Podcast ใน NotebookLM
+หน้าที่ของคุณคือวิเคราะห์ความเชื่อมโยงระดับสถาบันระหว่าง 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สรุปบทสัมภาษณ์ผู้เชี่ยวชาญจาก YouTube' และ 'สัญญาณกราฟเทคนิคอลเชิงลึกจาก TradingView' ของสินทรัพย์และกองทุนเป้าหมาย เพื่อส่งต่อข้อมูลให้วิเคราะห์เป็น Podcast ใน NotebookLM
 
 [ชุดข้อมูลที่ 1: สัญญาณเทคนิคอลล่าสุดจาก TradingView]
 ----------------------------------------
@@ -133,6 +153,11 @@ def run_investment_ai_pipeline():
 {raw_news_data}
 ----------------------------------------
 
+[ชุดข้อมูลที่ 3: บทสัมภาษณ์และมุมมองผู้เชี่ยวชาญจาก YouTube]
+----------------------------------------
+{youtube_insights}
+----------------------------------------
+
 จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 4 ส่วนดังนี้:
 
 [PART 1: การตรวจสุขภาพสินทรัพย์และกองทุน (Asset & Fund Health Check)]
@@ -142,7 +167,7 @@ def run_investment_ai_pipeline():
   2) **KTB RMF1 (ตราสารหนี้/พักเงิน):** ประเมินความเสี่ยงและอัตราผลตอบแทนผ่าน Benchmark ทิศทาง Bond Yield (US10Y) ว่าควรใช้เป็นที่หลบภัยหรือไม่
 
 [PART 2: บทวิเคราะห์ความสอดคล้อง (Macro-Technical Linkage)]
-- วิเคราะห์เปรียบเทียบว่าข้อมูลข่าวสารและบทวิเคราะห์จาก Investing.com สอดคล้องหรือขัดแย้งกับสัญญาณเทคนิคอลจริงในตลาดอย่างไร
+- วิเคราะห์เปรียบเทียบว่าข้อมูลข่าวสาร/บทวิเคราะห์จาก Investing.com และ YouTube สอดคล้องหรือขัดแย้งกับสัญญาณเทคนิคอลจริงในตลาดอย่างไร
 
 [PART 3: คำแนะนำการจัดพอร์ตเชิงกลยุทธ์ (Action Plan & Switching Strategy)]
 - ฟันธงแนวทางการปรับน้ำหนักพอร์ตประจำวัน
@@ -159,7 +184,7 @@ def run_investment_ai_pipeline():
         
         # ใช้รุ่นมาตรฐาน gemini-2.0-flash
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.0-flash",
             contents=macro_tech_prompt
         )
         report_text = response.text
@@ -172,7 +197,7 @@ def run_investment_ai_pipeline():
         
         header = (
             f"📦 Repository: {repo_name}\n"
-            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (วิเคราะห์พอร์ต KTB RMF + Investing.com)]\n"
+            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (วิเคราะห์พอร์ต KTB RMF + Investing.com + YouTube)]\n"
             f"--------------------------------------------------\n\n"
         )
 
