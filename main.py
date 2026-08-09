@@ -140,21 +140,11 @@ def run_investment_ai_pipeline():
 
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
 #--------------------------------------------------------------        
-# ดึงชื่อ Repository อัตโนมัติจาก GitHub Environment Variables
-        repo_name = os.environ.get("GITHUB_REPOSITORY", "my-investment-bot-v4")
-# สร้าง Header ส่งแค่ชื่อ Repo และสถานะ (ไม่มีเวลา)
-       header = (
-            f"📦 Repository: {repo_name}\n"
-            f"✅ STATUS: SUCCESS\n"
-            f"--------------------------------------------------\n"
-            f"📊 รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report\n\n"
-       )
 
-       send_to_cloudflare(header + report_text)
        
 #---------------------------------------------------------------  
-        #header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report]\n\n"
-        #send_to_cloudflare(header + report_text)
+        header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report]\n\n"
+        send_to_cloudflare(header + report_text)
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในระบบ AI: {e}")
