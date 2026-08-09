@@ -83,7 +83,7 @@ def send_to_cloudflare(message_text):
         response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers)
         if response.status_code in [200, 201]:
             print("✅ ส่งรายงานไปยัง Cloudflare เรียบร้อยแล้ว! สวัสดี สิงห์สะอาด")
-            print("✅ 2222สวัสดีณรงค์ศักดิ์!")
+            
             repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
             print(f"Repository: {repo_name}")
         else:
@@ -144,11 +144,12 @@ def run_investment_ai_pipeline():
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
         #print("✅ สวัสดีณรงค์ศักดิ์!")
         #--------------------------------------------------------------        
-        
+        repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
+        print(repo_name)
         #---------------------------------------------------------------  
 
         header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report(ณรงค์ศักดิ์)]\n\n"
-        send_to_cloudflare(header + report_text)
+        send_to_cloudflare(header + report_text + repo_name)
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในระบบ AI: {e}")
