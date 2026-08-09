@@ -2,3 +2,4 @@ google-genai
 tradingview-ta
 feedparser
 requests
+youtube-transcript-api
