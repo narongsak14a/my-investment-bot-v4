@@ -148,7 +148,7 @@ def run_investment_ai_pipeline():
         #---------------------------------------------------------------  
 
         header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report(ณรงค์ศักดิ์)]\n\n"
-        send_to_cloudflare(header + report_text + repo_name)
+        send_to_cloudflare(header + report_text)
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในระบบ AI: {e}")
