@@ -328,7 +328,7 @@ def run_investment_ai_pipeline():
         
         # ใช้รุ่นมาตรฐาน gemini-2.0-flash
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.6-flash",
             contents=macro_tech_prompt
         )
         report_text = response.text
