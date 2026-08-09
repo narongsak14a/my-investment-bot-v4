@@ -145,7 +145,7 @@ def run_investment_ai_pipeline():
         
         # เรียกใช้ Gemini 2.5 Flash รุ่นมาตรฐาน
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=macro_tech_prompt
         )
         report_text = response.text
