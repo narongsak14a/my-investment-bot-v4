@@ -82,7 +82,10 @@ def send_to_cloudflare(message_text):
     try:
         response = requests.post(CLOUDFLARE_WORKER_URL, json=payload, headers=headers)
         if response.status_code in [200, 201]:
-            print("✅ ส่งรายงานไปยัง Cloudflare เรียบร้อยแล้ว!")
+            print("✅ ส่งรายงานไปยัง Cloudflare เรียบร้อยแล้ว! สวัสดี สิงห์สะอาด")
+            print("✅ 2222สวัสดีณรงค์ศักดิ์!")
+            repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
+            print(f"Repository: {repo_name}")
         else:
             print(f"❌ ส่งเข้า Cloudflare ไม่สำเร็จ (HTTP {response.status_code}): {response.text}")
     except Exception as e:
@@ -139,10 +142,9 @@ def run_investment_ai_pipeline():
         print(report_text)
 
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
-        print("✅ สวัสดีณรงค์ศักดิ์!")
+        #print("✅ สวัสดีณรงค์ศักดิ์!")
         #--------------------------------------------------------------        
-        repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
-        print(f"Repository: {repo_name}")
+        
         #---------------------------------------------------------------  
 
         header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report(ณรงค์ศักดิ์)]\n\n"
