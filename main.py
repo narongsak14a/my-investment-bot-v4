@@ -11,10 +11,10 @@ from youtube_transcript_api import YouTubeTranscriptApi
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL")
 CLOUDFLARE_AUTH_TOKEN = os.environ.get("CLOUDFLARE_AUTH_TOKEN")
+PORTFOLIO_URL = "https://broad-disk-2905.narongsak14.workers.dev/"
 
-# รายชื่อ Video ID จาก YouTube (ใส่เฉพาะ ID เช่น https://www.youtube.com/watch?v=ABC123xyz ให้ใส่ "ABC123xyz")
-# ใส่ Video ID คลิปสัมภาษณ์จากช่อง @traderkp หรือช่องอื่นๆ ที่ต้องการที่นี่
-YOUTUBE_VIDEO_IDS = ["Fp52DRLJ9c0"]
+# รายชื่อ Video ID จาก YouTube (หากไม่มีให้ปล่อยเป็น [""])
+YOUTUBE_VIDEO_IDS = [""]
 
 # รายชื่อสินทรัพย์ ดัชนีอ้างอิง และกองทุนเป้าหมาย
 ASSETS = [
@@ -35,8 +35,22 @@ ASSETS = [
 ]
 
 # ==========================================
-# 2. ฟังก์ชันดึงข้อมูลเชิงลึก
+# 2. ฟังก์ชันดึงข้อมูลพอร์ต, RSS & TradingView
 # ==========================================
+def fetch_portfolio_data():
+    print("⏳ กำลังเชื่อมต่อดึงข้อมูลพอร์ตการลงทุนจริง...")
+    try:
+        response = requests.get(PORTFOLIO_URL, timeout=10)
+        if response.status_code == 200:
+            print("✅ ดึงข้อมูลพอร์ตการลงทุนสำเร็จ!")
+            return response.text[:2500]
+        else:
+            print(f"⚠️ ไม่สามารถดึงข้อมูลพอร์ตได้ (HTTP {response.status_code})")
+            return "• ไม่สามารถดึงข้อมูลพอร์ตได้ในขณะนี้"
+    except Exception as e:
+        print(f"⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพอร์ต: {e}")
+        return "• ไม่พบข้อมูลพอร์ตการลงทุน"
+
 def fetch_all_tradingview_signals():
     print("⏳ กำลังดึงสัญญาณเทคนิคอลเชิงลึกจาก TradingView...")
     tv_summary_report = ""
@@ -77,7 +91,7 @@ def fetch_rss_news():
         try:
             feed = feedparser.parse(url)
             if feed.entries:
-                for entry in feed.entries[:2]: # ดึงรายการละ 2 ข่าวล่าสุด
+                for entry in feed.entries[:2]:
                     summary = getattr(entry, 'summary', '')
                     clean_summary = summary.split('<')[0][:180] if summary else 'ไม่มีรายละเอียดสรุป'
                     news_compiled += f"• ข่าวสาร/บทวิเคราะห์: {entry.title}\n  รายละเอียด: {clean_summary}...\n"
@@ -97,15 +111,15 @@ def fetch_youtube_insights():
         if not video_id:
             continue
         try:
-            # ปรับใช้ YouTubeTranscriptApi แบบอัปเดตล่าสุด
             ytt_api = YouTubeTranscriptApi()
             transcript_list = ytt_api.fetch(video_id, languages=['th', 'en'])
             text = " ".join([item['text'] for item in transcript_list])[:1800]
             yt_summary += f"• สรุปบทสัมภาษณ์ YouTube (ID: {video_id}): {text}\n\n"
         except Exception as e:
-            print(f"⚠️ ไม่สามารถดึง Transcript จากคลิป {video_id}: {e}")
+            print(f"⚠️ ข้ามการดึง Transcript จาก YouTube ({e})")
             
     return yt_summary if yt_summary else "• ไม่มีข้อมูลบทสัมภาษณ์ YouTube ในรอบนี้\n"
+
 def send_to_cloudflare(message_text):
     print("⏳ กำลังส่งข้อมูลไปยัง Cloudflare...")
     if not CLOUDFLARE_WORKER_URL:
@@ -136,46 +150,51 @@ def send_to_cloudflare(message_text):
 # ==========================================
 def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
+    portfolio_data = fetch_portfolio_data()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
 
     macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' 
-หน้าที่ของคุณคือวิเคราะห์ความเชื่อมโยงระดับสถาบันระหว่าง 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สรุปบทสัมภาษณ์ผู้เชี่ยวชาญจาก YouTube' และ 'สัญญาณกราฟเทคนิคอลเชิงลึกจาก TradingView' ของสินทรัพย์และกองทุนเป้าหมาย เพื่อส่งต่อข้อมูลให้วิเคราะห์เป็น Podcast ใน NotebookLM
+หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com' และ 'สัญญาณเทคนิคอลจาก TradingView'
 
-[ชุดข้อมูลที่ 1: สัญญาณเทคนิคอลล่าสุดจาก TradingView]
+[เป้าหมายและเงื่อนไขการลงทุนของผู้ใช้]
+1. **เป้าหมายหลัก:** ต้องการสร้างผลตอบแทนชนะอัตราเงินเฟ้อในระยะยาว (Beat Inflation Target)
+2. **เงื่อนไขสำคัญสูงสุด:** ต้องปกป้องเงินต้น ไม่ให้เกิดความเสียหายหรือขาดทุนรุนแรง (Capital Preservation / Low Capital Loss Risk)
+
+[ข้อมูลพอร์ตการลงทุนปัจจุบันของผู้ใช้ (จาก Worker)]
 ----------------------------------------
+{portfolio_data}
+----------------------------------------
+
+[ชุดข้อมูลประกอบการวิเคราะห์]
+- สัญญาณเทคนิคอล TradingView:
 {tradingview_signals}
-----------------------------------------
 
-[ชุดข้อมูลที่ 2: สภาพการณ์ข่าวสารและบทวิเคราะห์ล่าสุดจาก Investing.com / Yahoo Finance]
-----------------------------------------
+- ข่าวสารการเงินและบทวิเคราะห์ Investing.com:
 {raw_news_data}
-----------------------------------------
 
-[ชุดข้อมูลที่ 3: บทสัมภาษณ์และมุมมองผู้เชี่ยวชาญจาก YouTube]
-----------------------------------------
+- ข้อมูลสัมภาษณ์ YouTube:
 {youtube_insights}
+
 ----------------------------------------
 
 จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 4 ส่วนดังนี้:
 
-[PART 1: การตรวจสุขภาพสินทรัพย์และกองทุน (Asset & Fund Health Check)]
-- วิเคราะห์สถานะแยกตามกลุ่ม: ทองคำ, หุ้นเทคโนโลยีต่างประเทศ (TSLA, NVDA), กลุ่มหุ้นการเงินและธนาคารไทย (ASP, KGI, TISCO, KTB, SCB, DEMCO), สินทรัพย์ดิจิทัล (BTC)
-- **วิเคราะห์เจาะจงกองทุน KTB RMF:**
-  1) **KTB RMF4 (หุ้นไทย):** ประเมินจากสัญญาณดัชนี SET ว่าอยู่ในโหมดน่าสะสม/พักการลงทุน
-  2) **KTB RMF1 (ตราสารหนี้/พักเงิน):** ประเมินความเสี่ยงและอัตราผลตอบแทนผ่าน Benchmark ทิศทาง Bond Yield (US10Y) ว่าควรใช้เป็นที่หลบภัยหรือไม่
+[PART 1: การประเมินสุขภาพพอร์ตจริง (Portfolio Health Check & Risk Assessment)]
+- ประเมินพอร์ตปัจจุบันของผู้ใช้ว่าสอดคล้องกับเป้าหมาย 'ชนะเงินเฟ้อ + เงินต้นไม่เสียหาย' มากน้อยเพียงใด
+- วิเคราะห์สัดส่วนสินทรัพย์เสี่ยงสูง (หุ้นไทย/หุ้นโลก/Crypto) เทียบกับ สินทรัพย์ปลอดภัย/พักเงิน (KTB RMF1 / ตราสารหนี้ / ทองคำ)
 
 [PART 2: บทวิเคราะห์ความสอดคล้อง (Macro-Technical Linkage)]
-- วิเคราะห์เปรียบเทียบว่าข้อมูลข่าวสาร/บทวิเคราะห์จาก Investing.com และ YouTube สอดคล้องหรือขัดแย้งกับสัญญาณเทคนิคอลจริงในตลาดอย่างไร
+- วิเคราะห์สภาวะตลาดปัจจุบันเทียบกับพอร์ต เช่น สัญญาณ TradingView และข่าวสาร Investing.com บ่งชี้ความเสี่ยงที่จะกระทบเงินต้นของพอร์ตนี้หรือไม่
 
-[PART 3: คำแนะนำการจัดพอร์ตเชิงกลยุทธ์ (Action Plan & Switching Strategy)]
-- ฟันธงแนวทางการปรับน้ำหนักพอร์ตประจำวัน
-- ระบุสัดส่วนการ DCA หรือการสับเปลี่ยนกองทุน (Switching) ระหว่าง **KTB RMF4 (หุ้นไทย)** และ **KTB RMF1 (ตราสารหนี้)** อย่างชัดเจนและมีเหตุผลประกอบ
+[PART 3: คำแนะนำจัดพอร์ตและกลยุทธ์ Switching (Action Plan & KTB RMF Strategy)]
+- ฟันธงสัดส่วนการปรับพอร์ตประจำวัน โดยเน้นคุมความเสี่ยงเงินต้นเป็นหลัก
+- ระบุสัดส่วนการ DCA หรือการสับเปลี่ยนกองทุน (Switching) ระหว่าง **KTB RMF4 (หุ้นไทย - เพื่อชนะเงินเฟ้อ)** และ **KTB RMF1 (ตราสารหนี้ - เพื่อปกป้องเงินต้น)** อย่างชัดเจน
 
 [PART 4: สคริปต์รวบยอดสำหรับสร้าง Podcast ใน NotebookLM]
-- แปลงบทวิเคราะห์ให้กลายเป็น 'สคริปต์บทพูดสั้น เร้าใจ และเป็นทางการ' (ความยาว 3-4 ย่อหน้า) ภาษาไทย เพื่อป้อนให้ระบบ NotebookLM สร้างเสียง Podcast ประจำวัน
+- แปลงบทวิเคราะห์ให้กลายเป็น 'สคริปต์บทพูดสั้น เร้าใจ และเป็นทางการ' (ความยาว 3-4 ย่อหน้า) ภาษาไทย เพื่อป้อนให้ระบบ NotebookLM แปลงเป็นเสียง Podcast
 
 เขียนรายงานด้วยน้ำเสียงสถาบันการเงิน เฉียบคม ตรงไปตรงมา กระชับ และไม่มีคำเกริ่นนำที่ไม่จำเป็น
 """
@@ -183,7 +202,6 @@ def run_investment_ai_pipeline():
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
         
-        # ใช้รุ่นมาตรฐาน gemini-2.0-flash
         response = client.models.generate_content(
             model="gemini-3.6-flash",
             contents=macro_tech_prompt
@@ -198,7 +216,7 @@ def run_investment_ai_pipeline():
         
         header = (
             f"📦 Repository: {repo_name}\n"
-            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (วิเคราะห์พอร์ต KTB RMF + Investing.com + YouTube)]\n"
+            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (วิเคราะห์พอร์ตจริง + เป้าหมายชนะเงินเฟ้อ)]\n"
             f"--------------------------------------------------\n\n"
         )
 
