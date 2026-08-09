@@ -139,14 +139,14 @@ def run_investment_ai_pipeline():
         print(report_text)
 
         print("\n📤 กำลังส่งรายงานไปยัง Cloudflare...")
+        print("✅ สวัสดีณรงค์ศักดิ์!")
         #--------------------------------------------------------------        
         repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
         print(f"Repository: {repo_name}")
-        print("✅ สวัสดีณรงค์ศักดิ์!")
         #---------------------------------------------------------------  
 
-        header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report]\n\n"
-        send_to_cloudflare(header + report_text)
+        header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report(ณรงค์ศักดิ์)]\n\n"
+        send_to_cloudflare(header + report_text + repo_name)
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในระบบ AI: {e}")
