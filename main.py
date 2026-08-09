@@ -97,14 +97,15 @@ def fetch_youtube_insights():
         if not video_id:
             continue
         try:
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['th', 'en'])
-            text = " ".join([item['text'] for item in transcript])[:1800]
+            # ปรับใช้ YouTubeTranscriptApi แบบอัปเดตล่าสุด
+            ytt_api = YouTubeTranscriptApi()
+            transcript_list = ytt_api.fetch(video_id, languages=['th', 'en'])
+            text = " ".join([item['text'] for item in transcript_list])[:1800]
             yt_summary += f"• สรุปบทสัมภาษณ์ YouTube (ID: {video_id}): {text}\n\n"
         except Exception as e:
             print(f"⚠️ ไม่สามารถดึง Transcript จากคลิป {video_id}: {e}")
             
     return yt_summary if yt_summary else "• ไม่มีข้อมูลบทสัมภาษณ์ YouTube ในรอบนี้\n"
-
 def send_to_cloudflare(message_text):
     print("⏳ กำลังส่งข้อมูลไปยัง Cloudflare...")
     if not CLOUDFLARE_WORKER_URL:
