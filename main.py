@@ -27,6 +27,7 @@ ASSETS = [
     {"name": "หุ้น TISCO (TISCO)", "symbol": "TISCO", "exchange": "SET", "screener": "thailand"},
     {"name": "หุ้น KTB (KTB)", "symbol": "KTB", "exchange": "SET", "screener": "thailand"},
     {"name": "หุ้น SCB (SCB)", "symbol": "SCB", "exchange": "SET", "screener": "thailand"},
+    {"name": "ดัชนีหุ้นไทย / KTB RMF4 (หุ้นไทย)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
     {"name": "Bitcoin (BTC/USD)", "symbol": "BTCUSD", "exchange": "BINANCE", "screener": "crypto"}
 ]
 
