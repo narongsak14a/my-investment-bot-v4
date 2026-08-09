@@ -22,6 +22,11 @@ ASSETS = [
     {"name": "Nvidia (NVDA)", "symbol": "NVDA", "exchange": "NASDAQ", "screener": "america"},
     {"name": "ดัชนีหุ้นไทย (SET Index)", "symbol": "SET", "exchange": "SET", "screener": "thailand"},
     {"name": "หุ้น DEMCO (DEMCO)", "symbol": "DEMCO", "exchange": "SET", "screener": "thailand"},
+    {"name": "หุ้น ASP (ASP)", "symbol": "ASP", "exchange": "SET", "screener": "thailand"},
+    {"name": "หุ้น KGI (KGI)", "symbol": "KGI", "exchange": "SET", "screener": "thailand"},
+    {"name": "หุ้น TISCO (TISCO)", "symbol": "TISCO", "exchange": "SET", "screener": "thailand"},
+    {"name": "หุ้น KTB (KTB)", "symbol": "KTB", "exchange": "SET", "screener": "thailand"},
+    {"name": "หุ้น SCB (SCB)", "symbol": "SCB", "exchange": "SET", "screener": "thailand"},
     {"name": "Bitcoin (BTC/USD)", "symbol": "BTCUSD", "exchange": "BINANCE", "screener": "crypto"}
 ]
 
