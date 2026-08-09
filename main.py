@@ -142,6 +142,7 @@ def run_investment_ai_pipeline():
         #--------------------------------------------------------------        
         repo_name = os.environ.get("GITHUB_REPOSITORY", "narongsak14a/my-investment-bot-v4")
         print(f"Repository: {repo_name}")
+        print("✅ สวัสดีณรงค์ศักดิ์!")
         #---------------------------------------------------------------  
 
         header = "📊 [รายงานสรุปกลยุทธ์การลงทุนประจำวัน CIO Report]\n\n"
