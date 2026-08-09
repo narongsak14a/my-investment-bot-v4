@@ -51,6 +51,61 @@ def fetch_portfolio_data():
         print(f"⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพอร์ต: {e}")
         return "• ไม่พบข้อมูลพอร์ตการลงทุน"
 
+def fetch_gold_analysis_detail():
+    print("⏳ กำลังดึงสัญญาณเทคนิคอลเจาะลึกทองคำ (XAUUSD) บน Timeframe 1D และ 4H...")
+    
+    timeframes = {
+        "1D (ภาพรวมวัน)": Interval.INTERVAL_1_DAY,
+        "4H (จังหวะระยะสั้น)": Interval.INTERVAL_4_HOURS
+    }
+    
+    gold_report = "=== [การวิเคราะห์เจาะลึกทองคำ XAUUSD (CDC ActionZone + Stochastic 14, 3, 3)] ===\n"
+    
+    for tf_name, tf_interval in timeframes.items():
+        try:
+            handler = TA_Handler(
+                symbol="XAUUSD",
+                exchange="OANDA",
+                screener="cfd",
+                interval=tf_interval
+            )
+            analysis = handler.get_analysis()
+            indicators = analysis.indicators
+            
+            close_price = indicators.get("close", 0)
+            ema12 = indicators.get("EMA12", 0)
+            ema26 = indicators.get("EMA26", 0)
+            
+            # ประเมินสภาวะ CDC ActionZone
+            if ema12 > ema26:
+                cdc_status = "🟢 BULLISH (โซนสีเขียว / ซื้อ-ถือครอง)"
+            else:
+                cdc_status = "🔴 BEARISH (โซนสีแดง / ขาย-พักเงิน)"
+                
+            # ดึงค่า Stochastic (%K, %D)
+            stoch_k = indicators.get("Stoch.K", 0)
+            stoch_d = indicators.get("Stoch.D", 0)
+            
+            stoch_status = "Neutral"
+            if stoch_k < 20:
+                stoch_status = "🔵 Oversold (ขายมากเกินไป - ลุ้นดีดกลับ/จังหวะตั้งรับ)"
+            elif stoch_k > 80:
+                stoch_status = "🟠 Overbought (ซื้อมากเกินไป - ระวังการย่อตัว)"
+            
+            summary_rec = analysis.summary.get('RECOMMENDATION', 'N/A')
+            
+            gold_report += (
+                f"\n📌 Timeframe: {tf_name}\n"
+                f"  - ราคาปัจจุบัน: {close_price:.2f}\n"
+                f"  - สัญญาณสรุป TradingView: [{summary_rec}]\n"
+                f"  - CDC ActionZone (EMA12/EMA26): {cdc_status} (EMA12: {ema12:.2f}, EMA26: {ema26:.2f})\n"
+                f"  - Stochastic (14, 3, 3): %K = {stoch_k:.2f}, %D = {stoch_d:.2f} [{stoch_status}]\n"
+            )
+        except Exception as e:
+            gold_report += f"\n⚠️ ไม่สามารถดึงข้อมูล XAUUSD ({tf_name}) ได้: {e}\n"
+            
+    return gold_report
+
 def fetch_all_tradingview_signals():
     print("⏳ กำลังดึงสัญญาณเทคนิคอลเชิงลึกจาก TradingView...")
     tv_summary_report = ""
@@ -151,13 +206,14 @@ def send_to_cloudflare(message_text):
 def run_investment_ai_pipeline():
     print("\n--- 🚀 เริ่มต้นกระบวนการวิเคราะห์การลงทุนระดับมืออาชีพ ---")
     portfolio_data = fetch_portfolio_data()
+    gold_detailed_signals = fetch_gold_analysis_detail()
     raw_news_data = fetch_rss_news()
     youtube_insights = fetch_youtube_insights()
     tradingview_signals = fetch_all_tradingview_signals()
 
     macro_tech_prompt = f"""
 คุณคือ 'ประธานคณะกรรมการฝ่ายวิจัยและจัดการกองทุน (Chief Investment Officer - CIO)' 
-หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com' และ 'สัญญาณเทคนิคอลจาก TradingView'
+หน้าที่ของคุณคือวิเคราะห์พอร์ตการลงทุนจริงของผู้ใช้ โดยประมวลผลร่วมกับ 'กระแสข่าวและบทวิเคราะห์จาก Investing.com', 'สัญญาณเทคนิคอลจาก TradingView' และ 'วิเคราะห์เจาะจง CDC ActionZone + Stochastic ของทองคำ'
 
 [เป้าหมายและเงื่อนไขการลงทุนของผู้ใช้]
 1. **เป้าหมายหลัก:** ต้องการสร้างผลตอบแทนชนะอัตราเงินเฟ้อในระยะยาว (Beat Inflation Target)
@@ -168,8 +224,13 @@ def run_investment_ai_pipeline():
 {portfolio_data}
 ----------------------------------------
 
-[ชุดข้อมูลประกอบการวิเคราะห์]
-- สัญญาณเทคนิคอล TradingView:
+[ชุดข้อมูลวิเคราะห์พิเศษ: ทองคำโลก XAUUSD (1D & 4H)]
+----------------------------------------
+{gold_detailed_signals}
+----------------------------------------
+
+[ชุดข้อมูลประกอบการวิเคราะห์อื่นๆ]
+- สัญญาณเทคนิคอลภาพรวม (TradingView):
 {tradingview_signals}
 
 - ข่าวสารการเงินและบทวิเคราะห์ Investing.com:
@@ -180,20 +241,24 @@ def run_investment_ai_pipeline():
 
 ----------------------------------------
 
-จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 4 ส่วนดังนี้:
+จงประมวลผลอย่างเป็นระบบและเขียน 'รายงานสรุปกลยุทธ์ฟิวชันข้ามมิติ' เป็นภาษาไทย โดยแยกประเด็นออกเป็น 5 ส่วนดังนี้:
 
 [PART 1: การประเมินสุขภาพพอร์ตจริง (Portfolio Health Check & Risk Assessment)]
 - ประเมินพอร์ตปัจจุบันของผู้ใช้ว่าสอดคล้องกับเป้าหมาย 'ชนะเงินเฟ้อ + เงินต้นไม่เสียหาย' มากน้อยเพียงใด
-- วิเคราะห์สัดส่วนสินทรัพย์เสี่ยงสูง (หุ้นไทย/หุ้นโลก/Crypto) เทียบกับ สินทรัพย์ปลอดภัย/พักเงิน (KTB RMF1 / ตราสารหนี้ / ทองคำ)
+- วิเคราะห์สัดส่วนสินทรัพย์เสี่ยงสูง เทียบกับ สินทรัพย์ปลอดภัย/พักเงิน (KTB RMF1 / ตราสารหนี้ / ทองคำ)
 
-[PART 2: บทวิเคราะห์ความสอดคล้อง (Macro-Technical Linkage)]
+[PART 2: วิเคราะห์จังหวะเข้าลงทุนทองคำ (XAUUSD Gold Timing Indicator)]
+- สรุปสถานะ CDC ActionZone (1D และ 4H) และ Stochastic (14, 3, 3) 
+- ฟันธงจังหวะและช่วงเวลาการลงทุนที่เหมาะสมของทองคำ เช่น "ควรรอย่อตัวแถวโซน Oversold ใน 4H", "โซนเขียว 1D สนับสนุนการสะสม" หรือ "อยู่ในภาวะ Overbought ให้ชะลอการซื้อ"
+
+[PART 3: บทวิเคราะห์ความสอดคล้อง (Macro-Technical Linkage)]
 - วิเคราะห์สภาวะตลาดปัจจุบันเทียบกับพอร์ต เช่น สัญญาณ TradingView และข่าวสาร Investing.com บ่งชี้ความเสี่ยงที่จะกระทบเงินต้นของพอร์ตนี้หรือไม่
 
-[PART 3: คำแนะนำจัดพอร์ตและกลยุทธ์ Switching (Action Plan & KTB RMF Strategy)]
+[PART 4: คำแนะนำจัดพอร์ตและกลยุทธ์ Switching (Action Plan & KTB RMF Strategy)]
 - ฟันธงสัดส่วนการปรับพอร์ตประจำวัน โดยเน้นคุมความเสี่ยงเงินต้นเป็นหลัก
 - ระบุสัดส่วนการ DCA หรือการสับเปลี่ยนกองทุน (Switching) ระหว่าง **KTB RMF4 (หุ้นไทย - เพื่อชนะเงินเฟ้อ)** และ **KTB RMF1 (ตราสารหนี้ - เพื่อปกป้องเงินต้น)** อย่างชัดเจน
 
-[PART 4: สคริปต์รวบยอดสำหรับสร้าง Podcast ใน NotebookLM]
+[PART 5: สคริปต์รวบยอดสำหรับสร้าง Podcast ใน NotebookLM]
 - แปลงบทวิเคราะห์ให้กลายเป็น 'สคริปต์บทพูดสั้น เร้าใจ และเป็นทางการ' (ความยาว 3-4 ย่อหน้า) ภาษาไทย เพื่อป้อนให้ระบบ NotebookLM แปลงเป็นเสียง Podcast
 
 เขียนรายงานด้วยน้ำเสียงสถาบันการเงิน เฉียบคม ตรงไปตรงมา กระชับ และไม่มีคำเกริ่นนำที่ไม่จำเป็น
@@ -216,7 +281,7 @@ def run_investment_ai_pipeline():
         
         header = (
             f"📦 Repository: {repo_name}\n"
-            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (วิเคราะห์พอร์ตจริง + เป้าหมายชนะเงินเฟ้อ)]\n"
+            f"📊 [รายงานสรุปกลยุทธ์การลงทุน CIO Report (พอร์ตจริง + CDC ActionZone Gold + ชนะเงินเฟ้อ)]\n"
             f"--------------------------------------------------\n\n"
         )
 
